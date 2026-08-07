@@ -66,6 +66,37 @@ export function isRenewingSoon(daysRemaining) {
   return daysRemaining >= 0 && daysRemaining <= 7;
 }
 
+/**
+ * Checks whether a subscription renewal date is overdue (less than 0 days remaining).
+ * 
+ * @param {number} daysRemaining - Number of days until renewal
+ * @returns {boolean} True if renewal date has passed
+ */
+export function isOverdue(daysRemaining) {
+  return daysRemaining < 0;
+}
+
+/**
+ * Categories list with dark theme badge styling configuration.
+ */
+export const CATEGORIES = ['Streaming', 'SaaS', 'Utilities', 'Fitness', 'Other'];
+
+export function getCategoryStyle(category = 'Other') {
+  switch (category) {
+    case 'Streaming':
+      return 'bg-red-950/70 text-red-300 border-red-800/60';
+    case 'SaaS':
+      return 'bg-blue-950/70 text-blue-300 border-blue-800/60';
+    case 'Utilities':
+      return 'bg-emerald-950/70 text-emerald-300 border-emerald-800/60';
+    case 'Fitness':
+      return 'bg-orange-950/70 text-orange-300 border-orange-800/60';
+    case 'Other':
+    default:
+      return 'bg-zinc-800 text-zinc-300 border-zinc-700';
+  }
+}
+
 export const CURRENCIES = [
   { code: 'USD', symbol: '$', label: 'USD ($)' },
   { code: 'INR', symbol: '₹', label: 'INR (₹)' },
@@ -129,14 +160,15 @@ export function formatCurrency(amountInUSD, currencyCode = 'USD') {
 }
 
 /**
- * Calculates total active monthly burn rate and upcoming renewals count.
+ * Calculates total active monthly burn rate, upcoming renewals count (0-7 days), and overdue count (<0 days).
  * 
  * @param {Array} subscriptions - List of subscription objects
- * @returns {{ totalMonthlyBurn: number, upcomingCount: number }}
+ * @returns {{ totalMonthlyBurn: number, upcomingCount: number, overdueCount: number }}
  */
 export function computeDashboardMetrics(subscriptions = []) {
   let totalMonthlyBurn = 0;
   let upcomingCount = 0;
+  let overdueCount = 0;
 
   subscriptions.forEach(sub => {
     // Only active subscriptions count towards monthly burn rate
@@ -144,15 +176,21 @@ export function computeDashboardMetrics(subscriptions = []) {
       totalMonthlyBurn += normalizeToMonthly(sub.cost, sub.billingCycle);
     }
 
-    // Count renewals happening within 7 days
     const daysLeft = getDaysRemaining(sub.nextRenewalDate);
-    if (isRenewingSoon(daysLeft)) {
+
+    // Overdue items
+    if (isOverdue(daysLeft)) {
+      overdueCount += 1;
+    } 
+    // Count renewals happening within 0-7 days (excluding overdue)
+    else if (isRenewingSoon(daysLeft)) {
       upcomingCount += 1;
     }
   });
 
   return {
     totalMonthlyBurn,
-    upcomingCount
+    upcomingCount,
+    overdueCount
   };
 }

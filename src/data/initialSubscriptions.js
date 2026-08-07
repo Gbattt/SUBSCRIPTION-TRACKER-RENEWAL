@@ -20,7 +20,8 @@ export const initialSubscriptions = [
     cost: 22.99,
     billingCycle: 'monthly',
     nextRenewalDate: getOffsetDateISO(3), // Renewing in 3 days (Renewing Soon)
-    status: 'active'
+    status: 'active',
+    category: 'Streaming'
   },
   {
     id: 'sub-copilot',
@@ -28,7 +29,8 @@ export const initialSubscriptions = [
     cost: 100.00,
     billingCycle: 'yearly',
     nextRenewalDate: getOffsetDateISO(5), // Renewing in 5 days (Renewing Soon)
-    status: 'active'
+    status: 'active',
+    category: 'SaaS'
   },
   {
     id: 'sub-spotify',
@@ -36,7 +38,8 @@ export const initialSubscriptions = [
     cost: 16.99,
     billingCycle: 'monthly',
     nextRenewalDate: getOffsetDateISO(18), // Renewing in 18 days
-    status: 'active'
+    status: 'active',
+    category: 'Streaming'
   },
   {
     id: 'sub-aws',
@@ -44,7 +47,17 @@ export const initialSubscriptions = [
     cost: 45.00,
     billingCycle: 'monthly',
     nextRenewalDate: getOffsetDateISO(11), // Paused subscription for savings demo
-    status: 'paused'
+    status: 'paused',
+    category: 'Utilities'
+  },
+  {
+    id: 'sub-gym',
+    name: 'Equinox Gym Pass',
+    cost: 85.00,
+    billingCycle: 'monthly',
+    nextRenewalDate: getOffsetDateISO(-2), // Overdue by 2 days
+    status: 'active',
+    category: 'Fitness'
   },
   {
     id: 'sub-adobe',
@@ -52,6 +65,7 @@ export const initialSubscriptions = [
     cost: 659.88,
     billingCycle: 'yearly',
     nextRenewalDate: getOffsetDateISO(2), // Renewing in 2 days (Renewing Soon)
-    status: 'active'
+    status: 'active',
+    category: 'SaaS'
   }
 ];

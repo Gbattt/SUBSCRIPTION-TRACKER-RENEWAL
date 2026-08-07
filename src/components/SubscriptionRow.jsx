@@ -1,13 +1,21 @@
-import React from 'react';
-import { AlertCircle, Trash2, Calendar, Clock } from 'lucide-react';
-import { getDaysRemaining, isRenewingSoon, formatCurrency } from '../utils/subscriptionLogic';
+import React, { useState } from 'react';
+import { AlertCircle, Trash2, Calendar, Clock, Pencil, AlertOctagon, Check, X } from 'lucide-react';
+import { getDaysRemaining, isRenewingSoon, isOverdue, formatCurrency, getCategoryStyle } from '../utils/subscriptionLogic';
 
-export default function SubscriptionRow({ subscription, onToggleStatus, onDelete, currency = 'USD' }) {
-  const { id, name, cost, billingCycle, nextRenewalDate, status } = subscription;
+export default function SubscriptionRow({
+  subscription,
+  onToggleStatus,
+  onStartEdit,
+  onDelete,
+  currency = 'USD'
+}) {
+  const { id, name, cost, billingCycle, nextRenewalDate, status, category = 'Other' } = subscription;
   const isPaused = status === 'paused';
+  const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
   const daysRemaining = getDaysRemaining(nextRenewalDate);
-  const showRenewingSoon = isRenewingSoon(daysRemaining);
+  const overdue = isOverdue(daysRemaining);
+  const renewingSoon = isRenewingSoon(daysRemaining);
 
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return 'N/A';
@@ -25,6 +33,13 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
     return dateStr;
   };
 
+  const handleConfirmDelete = () => {
+    setIsConfirmingDelete(false);
+    onDelete(id);
+  };
+
+  const categoryStyle = getCategoryStyle(category);
+
   return (
     <>
       {/* DESKTOP TABLE ROW */}
@@ -33,7 +48,7 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
           isPaused ? 'opacity-40 bg-zinc-950/60' : 'hover:bg-zinc-800/60 bg-zinc-900/40'
         }`}
       >
-        {/* Service Name */}
+        {/* Service Name & Category Tag */}
         <td className="px-6 py-4 whitespace-nowrap">
           <div className="flex items-center gap-3">
             <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-xs ${
@@ -42,11 +57,16 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
               {name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <span className={`font-bold text-sm ${isPaused ? 'text-zinc-500' : 'text-white'}`}>
-                {name}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`font-bold text-sm ${isPaused ? 'text-zinc-500' : 'text-white'}`}>
+                  {name}
+                </span>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border capitalize ${categoryStyle}`}>
+                  {category}
+                </span>
+              </div>
               {isPaused && (
-                <span className="block text-[11px] font-normal text-zinc-500">
+                <span className="block text-[11px] font-normal text-zinc-500 mt-0.5">
                   Savings Simulation Active
                 </span>
               )}
@@ -79,15 +99,23 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
           </span>
         </td>
 
-        {/* Next Renewal Date */}
+        {/* Next Renewal Date & Badges */}
         <td className="px-6 py-4 whitespace-nowrap">
           <div className="flex items-center gap-2">
             <span className={`text-sm ${isPaused ? 'text-zinc-500' : 'text-zinc-300'}`}>
               {formatDateDisplay(nextRenewalDate)}
             </span>
 
+            {/* Overdue Badge */}
+            {overdue && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-red-950/90 text-red-300 border border-red-800/80 shadow-sm animate-pulse">
+                <AlertOctagon className="w-3 h-3 text-red-500" />
+                Overdue
+              </span>
+            )}
+
             {/* Amber "Renewing Soon" Badge */}
-            {showRenewingSoon && (
+            {!overdue && renewingSoon && (
               <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 shadow-sm shadow-amber-950/40 animate-pulse">
                 <Clock className="w-3 h-3 text-amber-400" />
                 Renewing Soon
@@ -99,9 +127,9 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
         {/* Days Remaining */}
         <td className="px-6 py-4 whitespace-nowrap">
           <span className={`text-xs font-medium px-2.5 py-1 rounded ${
-            daysRemaining < 0
-              ? 'bg-red-950/80 text-red-400 border border-red-800/60'
-              : showRenewingSoon
+            overdue
+              ? 'bg-red-950/80 text-red-400 border border-red-800/60 font-bold'
+              : renewingSoon
               ? 'text-amber-300 font-bold'
               : 'text-zinc-400'
           }`}>
@@ -120,8 +148,9 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
               type="button"
               role="switch"
               aria-checked={!isPaused}
+              aria-label={!isPaused ? `Pause ${name} subscription` : `Activate ${name} subscription`}
               onClick={() => onToggleStatus(id)}
-              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2 focus:ring-offset-zinc-900 ${
+              className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 focus:ring-offset-zinc-900 ${
                 !isPaused ? 'bg-red-600 shadow-md shadow-red-950/60' : 'bg-zinc-700'
               }`}
             >
@@ -139,15 +168,51 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
           </div>
         </td>
 
-        {/* Delete Action */}
+        {/* Edit & Delete Action Column */}
         <td className="px-6 py-4 whitespace-nowrap text-right">
-          <button
-            onClick={() => onDelete(id)}
-            title="Delete subscription"
-            className="p-1.5 text-zinc-500 hover:text-red-400 hover:bg-red-950/60 rounded-lg transition-all"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          {isConfirmingDelete ? (
+            <div className="flex items-center justify-end gap-1.5 animate-fadeIn">
+              <span className="text-xs font-bold text-red-400 mr-1">Delete {name}?</span>
+              <button
+                onClick={handleConfirmDelete}
+                className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded flex items-center gap-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-red-500"
+                aria-label={`Confirm deletion of ${name}`}
+              >
+                <Check className="w-3 h-3" />
+                Confirm
+              </button>
+              <button
+                onClick={() => setIsConfirmingDelete(false)}
+                className="px-2 py-1 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 text-xs font-semibold rounded flex items-center gap-1 cursor-pointer focus:outline-none focus:ring-2 focus:ring-zinc-600"
+                aria-label="Cancel deletion"
+              >
+                <X className="w-3 h-3" />
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center justify-end gap-1">
+              {/* Pencil Edit Icon */}
+              <button
+                onClick={() => onStartEdit(subscription)}
+                title="Edit subscription"
+                aria-label={`Edit ${name} subscription`}
+                className="p-1.5 text-zinc-400 hover:text-amber-400 hover:bg-zinc-800 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-amber-500"
+              >
+                <Pencil className="w-4 h-4" />
+              </button>
+
+              {/* Trash Delete Icon */}
+              <button
+                onClick={() => setIsConfirmingDelete(true)}
+                title="Delete subscription"
+                aria-label={`Delete ${name} subscription`}
+                className="p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-950/60 rounded-lg transition-all focus:outline-none focus:ring-2 focus:ring-red-500"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
         </td>
       </tr>
 
@@ -165,10 +230,15 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
               {name.charAt(0).toUpperCase()}
             </div>
             <div>
-              <h4 className={`font-bold text-base ${isPaused ? 'text-zinc-500' : 'text-white'}`}>
-                {name}
-              </h4>
-              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize mt-0.5 ${
+              <div className="flex items-center gap-2">
+                <h4 className={`font-bold text-base ${isPaused ? 'text-zinc-500' : 'text-white'}`}>
+                  {name}
+                </h4>
+                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border capitalize ${categoryStyle}`}>
+                  {category}
+                </span>
+              </div>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium capitalize mt-1 ${
                 billingCycle === 'yearly'
                   ? 'bg-blue-950/60 text-blue-400'
                   : 'bg-purple-950/60 text-purple-400'
@@ -199,7 +269,7 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
 
           <div>
             <span className="text-zinc-500 block mb-0.5">Days Remaining</span>
-            <div className={`font-bold ${showRenewingSoon ? 'text-amber-300' : 'text-zinc-300'}`}>
+            <div className={`font-bold ${overdue ? 'text-red-400' : renewingSoon ? 'text-amber-300' : 'text-zinc-300'}`}>
               {daysRemaining < 0
                 ? `${Math.abs(daysRemaining)}d ago (Overdue)`
                 : daysRemaining === 0
@@ -209,7 +279,16 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
           </div>
         </div>
 
-        {showRenewingSoon && (
+        {overdue && (
+          <div className="mb-4">
+            <span className="inline-flex items-center gap-1 w-full justify-center px-3 py-1.5 rounded-lg text-xs font-bold bg-red-950/90 text-red-300 border border-red-800/80">
+              <AlertOctagon className="w-3.5 h-3.5 text-red-500" />
+              Overdue Renewal
+            </span>
+          </div>
+        )}
+
+        {!overdue && renewingSoon && (
           <div className="mb-4">
             <span className="inline-flex items-center gap-1 w-full justify-center px-3 py-1.5 rounded-lg text-xs font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40">
               <Clock className="w-3.5 h-3.5 text-amber-400" />
@@ -224,6 +303,7 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
               type="button"
               role="switch"
               aria-checked={!isPaused}
+              aria-label={!isPaused ? `Pause ${name} subscription` : `Activate ${name} subscription`}
               onClick={() => onToggleStatus(id)}
               className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out ${
                 !isPaused ? 'bg-red-600' : 'bg-zinc-700'
@@ -242,13 +322,42 @@ export default function SubscriptionRow({ subscription, onToggleStatus, onDelete
             </span>
           </div>
 
-          <button
-            onClick={() => onDelete(id)}
-            className="flex items-center gap-1 text-xs text-red-400 hover:text-red-300 px-2 py-1 rounded bg-red-950/60 border border-red-800/40"
-          >
-            <Trash2 className="w-3.5 h-3.5" />
-            Delete
-          </button>
+          {isConfirmingDelete ? (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={handleConfirmDelete}
+                className="px-2.5 py-1 bg-red-600 text-white text-xs font-bold rounded flex items-center gap-1"
+              >
+                Confirm Delete
+              </button>
+              <button
+                onClick={() => setIsConfirmingDelete(false)}
+                className="px-2 py-1 bg-zinc-800 text-zinc-300 text-xs font-semibold rounded"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => onStartEdit(subscription)}
+                aria-label={`Edit ${name} subscription`}
+                className="flex items-center gap-1 text-xs text-amber-400 px-2 py-1 rounded bg-zinc-800 border border-zinc-700"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+                Edit
+              </button>
+
+              <button
+                onClick={() => setIsConfirmingDelete(true)}
+                aria-label={`Delete ${name} subscription`}
+                className="flex items-center gap-1 text-xs text-red-400 px-2 py-1 rounded bg-red-950/60 border border-red-800/40"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                Delete
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </>

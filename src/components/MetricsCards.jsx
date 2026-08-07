@@ -1,8 +1,15 @@
 import React from 'react';
-import { DollarSign, Clock, AlertTriangle, TrendingUp, Sparkles } from 'lucide-react';
+import { DollarSign, Clock, AlertTriangle, TrendingUp, Sparkles, AlertOctagon } from 'lucide-react';
 import { formatCurrency } from '../utils/subscriptionLogic';
 
-export default function MetricsCards({ totalMonthlyBurn, upcomingCount, pausedCount, pausedMonthlySavings, currency = 'USD' }) {
+export default function MetricsCards({
+  totalMonthlyBurn,
+  upcomingCount,
+  overdueCount = 0,
+  pausedCount,
+  pausedMonthlySavings,
+  currency = 'USD'
+}) {
   const projectedYearly = totalMonthlyBurn * 12;
 
   return (
@@ -44,14 +51,22 @@ export default function MetricsCards({ totalMonthlyBurn, upcomingCount, pausedCo
         </div>
       </div>
 
-      {/* Card B: Upcoming Renewals */}
+      {/* Card B: Upcoming Renewals & Overdue Alert */}
       <div className="bg-zinc-900/90 rounded-xl shadow-xl border border-zinc-800 p-6 relative overflow-hidden transition-all hover:border-zinc-700 backdrop-blur-md">
         <div className="flex items-center justify-between mb-3">
           <span className="text-xs font-bold uppercase tracking-widest text-zinc-400">
             Card B
           </span>
-          <div className={`p-2.5 rounded-lg border shadow-sm ${upcomingCount > 0 ? 'bg-amber-950/70 border-amber-800/60 text-amber-400' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}>
-            <Clock className="w-5 h-5" />
+          <div className="flex items-center gap-2">
+            {overdueCount > 0 && (
+              <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-red-950 text-red-400 border border-red-800/80 animate-pulse shadow-sm">
+                <AlertOctagon className="w-3.5 h-3.5 text-red-500" />
+                {overdueCount} Overdue
+              </span>
+            )}
+            <div className={`p-2.5 rounded-lg border shadow-sm ${upcomingCount > 0 ? 'bg-amber-950/70 border-amber-800/60 text-amber-400' : 'bg-zinc-800 border-zinc-700 text-zinc-400'}`}>
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
         </div>
 
@@ -73,6 +88,11 @@ export default function MetricsCards({ totalMonthlyBurn, upcomingCount, pausedCo
             <span className="flex items-center gap-1.5 text-amber-300 bg-amber-950/70 px-3 py-1 rounded-md border border-amber-800/60 font-semibold shadow-xs">
               <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
               Action recommended: Review charges before auto-renewing
+            </span>
+          ) : overdueCount > 0 ? (
+            <span className="text-red-400 font-semibold flex items-center gap-1">
+              <AlertOctagon className="w-3.5 h-3.5 text-red-500" />
+              {overdueCount} renewal date(s) have passed and require attention
             </span>
           ) : (
             <span className="text-zinc-500">
