@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PlusCircle, Calendar, DollarSign, Tag, Clock, AlertCircle, CheckCircle, XCircle, Folder } from 'lucide-react';
-import { getCurrencySymbol, convertToUSD, convertFromUSD, CATEGORIES } from '../utils/subscriptionLogic';
+import { getCurrencySymbol, CATEGORIES } from '../utils/subscriptionLogic';
 
 export default function SubscriptionForm({
   onAddOrUpdateSubscription,
@@ -14,17 +14,19 @@ export default function SubscriptionForm({
   const [nextRenewalDate, setNextRenewalDate] = useState('');
   const [category, setCategory] = useState('Other');
   const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const currencySymbol = getCurrencySymbol(currency);
   const isEditing = Boolean(editingSubscription);
 
-  // Pre-fill form when editingSubscription changes
   useEffect(() => {
     if (editingSubscription) {
       setName(editingSubscription.name || '');
-      // Convert stored USD cost to currently selected currency for editing display
-      const displayCost = convertFromUSD(editingSubscription.cost, currency);
-      setCost(displayCost ? displayCost.toFixed(2) : '');
+      // Use displayCost pre-converted by server API response
+      const displayCost = editingSubscription.displayCost !== undefined
+        ? editingSubscription.displayCost
+        : editingSubscription.cost;
+      setCost(displayCost ? displayCost.toString() : '');
       setBillingCycle(editingSubscription.billingCycle || 'monthly');
       setNextRenewalDate(editingSubscription.nextRenewalDate || '');
       setCategory(editingSubscription.category || 'Other');
@@ -32,7 +34,7 @@ export default function SubscriptionForm({
     } else {
       resetForm();
     }
-  }, [editingSubscription, currency]);
+  }, [editingSubscription]);
 
   const resetForm = () => {
     setName('');
@@ -43,7 +45,7 @@ export default function SubscriptionForm({
     setError('');
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!name.trim()) {
@@ -60,22 +62,27 @@ export default function SubscriptionForm({
     }
 
     setError('');
+    setIsSubmitting(true);
 
-    // Convert cost in active currency to base USD for storage
-    const baseCostUSD = convertToUSD(parseFloat(cost), currency);
+    try {
+      const subscriptionPayload = {
+        id: isEditing ? editingSubscription.id : undefined,
+        name: name.trim(),
+        cost: parseFloat(cost), // Numeric cost entered by user in active currency
+        billingCycle: billingCycle,
+        nextRenewalDate: nextRenewalDate,
+        category: category || 'Other',
+        currency: currency,
+        status: isEditing ? editingSubscription.status : 'active'
+      };
 
-    const subscriptionData = {
-      id: isEditing ? editingSubscription.id : `sub-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-      name: name.trim(),
-      cost: baseCostUSD,
-      billingCycle: billingCycle,
-      nextRenewalDate: nextRenewalDate,
-      category: category || 'Other',
-      status: isEditing ? editingSubscription.status : 'active'
-    };
-
-    onAddOrUpdateSubscription(subscriptionData);
-    resetForm();
+      await onAddOrUpdateSubscription(subscriptionPayload, isEditing);
+      resetForm();
+    } catch (err) {
+      setError(err.message || 'Failed to save subscription.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -216,13 +223,18 @@ export default function SubscriptionForm({
         <div className="lg:col-span-1">
           <button
             type="submit"
+            disabled={isSubmitting}
             className={`w-full flex items-center justify-center gap-2 px-4 py-2.5 text-white font-bold text-sm rounded-lg shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-zinc-900 cursor-pointer uppercase tracking-wider ${
+              isSubmitting ? 'opacity-50 cursor-not-allowed' : ''
+            } ${
               isEditing
                 ? 'bg-amber-600 hover:bg-amber-700 focus:ring-amber-500 shadow-amber-950/60'
                 : 'bg-red-600 hover:bg-red-700 focus:ring-red-500 shadow-red-950/60'
             }`}
           >
-            {isEditing ? (
+            {isSubmitting ? (
+              <span>Saving...</span>
+            ) : isEditing ? (
               <>
                 <CheckCircle className="w-4 h-4" />
                 Update Subscription

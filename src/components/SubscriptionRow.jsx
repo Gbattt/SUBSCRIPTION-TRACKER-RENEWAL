@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AlertCircle, Trash2, Calendar, Clock, Pencil, AlertOctagon, Check, X } from 'lucide-react';
-import { getDaysRemaining, isRenewingSoon, isOverdue, formatCurrency, getCategoryStyle } from '../utils/subscriptionLogic';
+import { formatDisplayCurrency, getCategoryStyle } from '../utils/subscriptionLogic';
 
 export default function SubscriptionRow({
   subscription,
@@ -9,13 +9,15 @@ export default function SubscriptionRow({
   onDelete,
   currency = 'USD'
 }) {
-  const { id, name, cost, billingCycle, nextRenewalDate, status, category = 'Other' } = subscription;
+  const { id, name, billingCycle, nextRenewalDate, status, category = 'Other' } = subscription;
   const isPaused = status === 'paused';
   const [isConfirmingDelete, setIsConfirmingDelete] = useState(false);
 
-  const daysRemaining = getDaysRemaining(nextRenewalDate);
-  const overdue = isOverdue(daysRemaining);
-  const renewingSoon = isRenewingSoon(daysRemaining);
+  // Consume pre-computed server calculation fields directly
+  const displayCost = subscription.displayCost !== undefined ? subscription.displayCost : subscription.cost;
+  const daysRemaining = subscription.daysRemaining !== undefined ? subscription.daysRemaining : 0;
+  const overdue = Boolean(subscription.isOverdue);
+  const renewingSoon = Boolean(subscription.isRenewingSoon);
 
   const formatDateDisplay = (dateStr) => {
     if (!dateStr) return 'N/A';
@@ -80,7 +82,7 @@ export default function SubscriptionRow({
             <span className={`font-black text-sm ${
               isPaused ? 'line-through text-zinc-500' : 'text-white'
             }`}>
-              {formatCurrency(cost, currency)}
+              {formatDisplayCurrency(displayCost, currency)}
             </span>
             <span className="text-xs text-zinc-500 capitalize">
               /{billingCycle === 'yearly' ? 'yr' : 'mo'}
@@ -99,7 +101,7 @@ export default function SubscriptionRow({
           </span>
         </td>
 
-        {/* Next Renewal Date & Badges */}
+        {/* Next Renewal Date & Server-Computed Badges */}
         <td className="px-6 py-4 whitespace-nowrap">
           <div className="flex items-center gap-2">
             <span className={`text-sm ${isPaused ? 'text-zinc-500' : 'text-zinc-300'}`}>
@@ -124,7 +126,7 @@ export default function SubscriptionRow({
           </div>
         </td>
 
-        {/* Days Remaining */}
+        {/* Server-Computed Days Remaining */}
         <td className="px-6 py-4 whitespace-nowrap">
           <span className={`text-xs font-medium px-2.5 py-1 rounded ${
             overdue
@@ -192,7 +194,6 @@ export default function SubscriptionRow({
             </div>
           ) : (
             <div className="flex items-center justify-end gap-1">
-              {/* Pencil Edit Icon */}
               <button
                 onClick={() => onStartEdit(subscription)}
                 title="Edit subscription"
@@ -202,7 +203,6 @@ export default function SubscriptionRow({
                 <Pencil className="w-4 h-4" />
               </button>
 
-              {/* Trash Delete Icon */}
               <button
                 onClick={() => setIsConfirmingDelete(true)}
                 title="Delete subscription"
@@ -250,7 +250,7 @@ export default function SubscriptionRow({
 
           <div className="text-right">
             <div className={`text-lg font-black ${isPaused ? 'line-through text-zinc-500' : 'text-white'}`}>
-              {formatCurrency(cost, currency)}
+              {formatDisplayCurrency(displayCost, currency)}
             </div>
             <span className="text-[10px] text-zinc-500 uppercase tracking-wider">
               per {billingCycle === 'yearly' ? 'year' : 'month'}

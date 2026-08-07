@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import SubscriptionRow from './SubscriptionRow';
 import { Layers, Filter, Sparkles, Inbox, Search, ArrowUpDown, ArrowUp, ArrowDown, X, RefreshCw } from 'lucide-react';
-import { isRenewingSoon, isOverdue, getDaysRemaining } from '../utils/subscriptionLogic';
 
 export default function SubscriptionGrid({
   subscriptions,
@@ -36,17 +35,14 @@ export default function SubscriptionGrid({
     setSortDirection('asc');
   };
 
-  // Filter, Search, and Sort Pipeline
+  // Filter, Search, and Sort Pipeline using server pre-calculated fields
   const filteredAndSortedSubscriptions = useMemo(() => {
     return subscriptions
       .filter((sub) => {
-        // Status & Renewing Soon filter pill
+        // Status & Renewing Soon filter pill (using server-computed isRenewingSoon)
         if (filter === 'active' && sub.status !== 'active') return false;
         if (filter === 'paused' && sub.status !== 'paused') return false;
-        if (filter === 'renewing') {
-          const daysLeft = getDaysRemaining(sub.nextRenewalDate);
-          if (!isRenewingSoon(daysLeft)) return false;
-        }
+        if (filter === 'renewing' && !sub.isRenewingSoon) return false;
 
         // Live Search Query substring matching
         if (searchQuery.trim()) {
@@ -63,14 +59,14 @@ export default function SubscriptionGrid({
 
         let valA, valB;
         if (sortField === 'cost') {
-          valA = a.cost;
-          valB = b.cost;
+          valA = a.displayCost !== undefined ? a.displayCost : a.cost;
+          valB = b.displayCost !== undefined ? b.displayCost : b.cost;
         } else if (sortField === 'nextRenewalDate') {
           valA = new Date(a.nextRenewalDate).getTime();
           valB = new Date(b.nextRenewalDate).getTime();
         } else if (sortField === 'daysRemaining') {
-          valA = getDaysRemaining(a.nextRenewalDate);
-          valB = getDaysRemaining(b.nextRenewalDate);
+          valA = a.daysRemaining !== undefined ? a.daysRemaining : 0;
+          valB = b.daysRemaining !== undefined ? b.daysRemaining : 0;
         }
 
         if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
@@ -89,8 +85,6 @@ export default function SubscriptionGrid({
       <ArrowDown className="w-3.5 h-3.5 text-red-500 font-bold" />
     );
   };
-
-  const isFiltered = filter !== 'all' || searchQuery.trim() !== '' || sortField !== null;
 
   return (
     <div className="bg-zinc-900/90 rounded-xl shadow-xl border border-zinc-800 overflow-hidden mb-8 transition-all hover:border-zinc-700 backdrop-blur-md">

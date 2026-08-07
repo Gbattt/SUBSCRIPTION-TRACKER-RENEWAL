@@ -1,6 +1,6 @@
 import React from 'react';
 import { DollarSign, Clock, AlertTriangle, TrendingUp, Sparkles, AlertOctagon } from 'lucide-react';
-import { formatCurrency } from '../utils/subscriptionLogic';
+import { formatDisplayCurrency } from '../utils/subscriptionLogic';
 
 export default function MetricsCards({
   totalMonthlyBurn,
@@ -31,7 +31,7 @@ export default function MetricsCards({
 
         <div className="flex items-baseline gap-2 mb-2">
           <span className="text-3xl sm:text-4xl font-black text-white tracking-tight">
-            {formatCurrency(totalMonthlyBurn, currency)}
+            {formatDisplayCurrency(totalMonthlyBurn, currency)}
           </span>
           <span className="text-xs font-medium text-zinc-400">/ month</span>
         </div>
@@ -39,13 +39,13 @@ export default function MetricsCards({
         <div className="pt-3 border-t border-zinc-800/80 flex items-center justify-between text-xs text-zinc-400">
           <span className="flex items-center gap-1.5">
             <TrendingUp className="w-3.5 h-3.5 text-red-500" />
-            Projected Annual: <strong className="text-white font-bold">{formatCurrency(projectedYearly, currency)}</strong>
+            Projected Annual: <strong className="text-white font-bold">{formatDisplayCurrency(projectedYearly, currency)}</strong>
           </span>
 
           {pausedCount > 0 && (
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-emerald-950/70 text-emerald-300 text-xs font-semibold border border-emerald-800/60 shadow-xs">
               <Sparkles className="w-3 h-3 text-emerald-400" />
-              Saving {formatCurrency(pausedMonthlySavings, currency)}/mo
+              Saving {formatDisplayCurrency(pausedMonthlySavings, currency)}/mo
             </span>
           )}
         </div>
